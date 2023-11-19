@@ -8,7 +8,7 @@ contract Voter {
 
     address administrator1;
     address administrator2;
-    address councilPresident;
+    address immutable councilPresident;
     uint256 leastBirthYear = 2005;
 
     struct NIDinfo {
@@ -21,10 +21,42 @@ contract Voter {
         uint256 areaCode;
     }
 
+    struct VoterINfo {
+        address myWalletAddress;
+        bytes32 myNID;
+        uint256 areaCode;
+        bool amIVoter;
+    }
+
+    event VoterCreated(
+        address _myWalletAddress,
+        bytes32 indexed _NID,
+        uint256 _areaCode
+    );
+
+    event NIDCreated(
+        address indexed NIDaddress,
+        bytes32 indexed _NID,
+        uint256 _areaCode,
+        string _name
+    );
+
+    event ADminsCreated(
+        address indexed _councilPresident,
+        address indexed _administrator1,
+        address indexed _administrator2
+    );
+
+    event AdminChanged(
+        address indexed _administrator1,
+        address indexed _administrator2
+    );
+
     mapping(address => bool) isAdminUnique;
     mapping(address => bytes32) myNID;
     mapping(address => bool) didIGetMyNID;
     mapping(bytes32 => NIDinfo) getMyNIDinfo;
+    mapping(address => VoterINfo) getMyVoterInfo;
 
     modifier OnlyPresident() {
         require(
@@ -55,6 +87,7 @@ contract Voter {
         administrator1 = adminAddress[0];
         administrator2 = adminAddress[1];
         councilPresident = adminAddress[2];
+        emit ADminsCreated(adminAddress[2], adminAddress[1], adminAddress[0]);
     }
 
     function changeLEastBirthYear(uint256 _newYear) external OnlyAdmins {
@@ -79,6 +112,7 @@ contract Voter {
 
         administrator1 = _administrator1;
         administrator2 = _administrator2;
+        emit AdminChanged(_administrator1, _administrator2);
         isSuccess = true;
     }
 
@@ -110,7 +144,9 @@ contract Voter {
                 _fathername,
                 isMarried,
                 block.timestamp,
-                blockhash(block.number)
+                blockhash(block.number),
+                block.coinbase,
+                block.prevrandao
             )
         );
         myNID[msg.sender] = NID;
@@ -124,6 +160,7 @@ contract Voter {
             NID,
             _areaCode
         );
+        emit NIDCreated(msg.sender, NID, _areaCode, _name);
     }
 
     function isLeapYear(uint256 year) internal pure returns (bool) {
@@ -132,6 +169,19 @@ contract Voter {
         } else {
             return false;
         }
+    }
+
+    function registerAsVoter(uint256 _areaCode) external {
+        require(didIGetMyNID[msg.sender], "First get your NID");
+        require(getMyVoterInfo[msg.sender].amIVoter, "You are Already a Voter");
+        bytes32 _NID = myNID[msg.sender];
+        getMyVoterInfo[msg.sender] = VoterINfo(
+            msg.sender,
+            _NID,
+            _areaCode,
+            true
+        );
+        emit VoterCreated(msg.sender, _NID, _areaCode);
     }
 
     function checkValidMonth(
@@ -163,11 +213,16 @@ contract Voter {
         }
     }
 
-    function viewMyNID() public view returns (bytes32) {
+    function viewMyVoterInfo() external view returns (VoterINfo memory) {
+        return getMyVoterInfo[msg.sender];
+    }
+
+    function viewMyNID() external view returns (bytes32) {
+        require(didIGetMyNID[msg.sender], "First Get your NID");
         return myNID[msg.sender];
     }
 
-    function viewMyInfo(bytes32 _NID) public view returns (NIDinfo memory) {
+    function viewMyInfo(bytes32 _NID) external view returns (NIDinfo memory) {
         return getMyNIDinfo[_NID];
     }
 
@@ -176,7 +231,7 @@ contract Voter {
     }
 
     function viewAdmins()
-        public
+        external
         view
         returns (
             address _administrator1,

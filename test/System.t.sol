@@ -7,10 +7,11 @@ import {Voter} from "../src/Voter.sol";
 contract VotingTest is Test {
     Voter public voter;
 
-    // Voting_System public voting_system;
+    Voting_System public voting_system;
 
     function setUp() external {
         voter = new Voter([address(1), address(2), address(3)]);
+        voting_system = new Voting_System(address(voter));
     }
 
     function testAdmins() external {
@@ -92,6 +93,24 @@ contract VotingTest is Test {
         voter.changeLEastBirthYear(year);
         uint256 testYear = voter.viewLeastBirthYear();
         assertEq(testYear, year);
+        vm.expectRevert();
+        voter.changeLEastBirthYear(2001);
         vm.stopPrank();
+    }
+
+    function testLastBirthYearRevert() external {
+        uint256 year = 2000;
+        vm.expectRevert();
+        voter.changeLEastBirthYear(year);
+    }
+
+    function testMyIDRevert() external {
+        vm.expectRevert();
+        voter.viewMyNID();
+    }
+
+    function testgetMyVOTERIDRevert() external {
+        vm.expectRevert();
+        voter.getMyVOTERID();
     }
 }

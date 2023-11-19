@@ -23,4 +23,15 @@ contract VotingTest is Test {
         assertEq(administrator2, address(2));
         assertEq(councilPresident, address(3));
     }
+
+    function testchangeAdministrator() external {
+        (, , address councilPresident) = voter.viewAdmins();
+        vm.prank(councilPresident);
+
+        bool success = voter.changeAdministrator(address(4), address(5));
+        assertEq(success, true);
+        vm.expectRevert();
+        bool testSuccess = voter.changeAdministrator(address(1), address(2));
+        assertEq(testSuccess, false);
+    }
 }

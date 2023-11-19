@@ -35,17 +35,29 @@ contract VotingTest is Test {
         assertEq(testSuccess, false);
     }
 
+    function registerNID() public returns (bytes32 _nid) {
+        _nid = voter.getMyNID("A", "B", "C", false, 1220, 1999, 8, 9);
+    }
+
+    function registerVoter() public returns (bytes32 _voterId) {
+        bytes32 nid = registerNID();
+        Voter.NIDinfo memory tempNid = voter.viewMyInfo(nid);
+        voter.registerAsVoter(tempNid.areaCode);
+        _voterId = voter.getMyVOTERID();
+    }
+
     function testNID() external {
         vm.startPrank(address(8));
-        bytes32 nid = voter.getMyNID("A", "B", "C", false, 1220, 1999, 8, 9);
+        bytes32 nid = registerNID();
         bytes32 testNid = voter.viewMyNID();
         assertEq(nid, testNid);
     }
 
     function testNIDStruct() external {
         vm.startPrank(address(8));
-        bytes32 nid = voter.getMyNID("A", "B", "C", false, 1220, 1999, 8, 9);
+        bytes32 nid = registerNID();
         Voter.NIDinfo memory tempNid = voter.viewMyInfo(nid);
+        vm.stopPrank();
         assertEq(tempNid._name, "A");
         assertEq(tempNid.fatherName, "C");
         assertEq(tempNid.motherName, "B");
@@ -53,5 +65,33 @@ contract VotingTest is Test {
         assertEq(tempNid.myWalletAddress, address(8));
         assertEq(tempNid.myNID, nid);
         assertEq(tempNid.areaCode, 1220);
+    }
+
+    function testRegisterVoter() external {
+        vm.startPrank(address(8));
+        bytes32 VOTERID = registerVoter();
+        bytes32 testID = voter.getMyVOTERID();
+        assertEq(testID, VOTERID);
+    }
+
+    function testVoterStruct() external {
+        vm.startPrank(address(8));
+        bytes32 _ID = registerVoter();
+        Voter.VoterINfo memory tempInfo = voter.viewMyVoterInfo();
+        assertEq(tempInfo.myWalletAddress, address(8));
+        assertEq(tempInfo._voterID, _ID);
+        assertEq(tempInfo.areaCode, 1220);
+        assertEq(tempInfo.myNID, voter.viewMyNID());
+        vm.stopPrank();
+    }
+
+    function testLastBirthYear() external {
+        (address administrator1, , ) = voter.viewAdmins();
+        vm.startPrank(administrator1);
+        uint256 year = 2000;
+        voter.changeLEastBirthYear(year);
+        uint256 testYear = voter.viewLeastBirthYear();
+        assertEq(testYear, year);
+        vm.stopPrank();
     }
 }

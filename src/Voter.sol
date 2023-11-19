@@ -26,12 +26,14 @@ contract Voter {
         bytes32 myNID;
         uint256 areaCode;
         bool amIVoter;
+        bytes32 _voterID;
     }
 
     event VoterCreated(
         address _myWalletAddress,
         bytes32 indexed _NID,
-        uint256 _areaCode
+        uint256 _areaCode,
+        bytes32 _voterID
     );
 
     event NIDCreated(
@@ -57,6 +59,7 @@ contract Voter {
     mapping(address => bool) didIGetMyNID;
     mapping(bytes32 => NIDinfo) getMyNIDinfo;
     mapping(address => VoterINfo) getMyVoterInfo;
+    mapping(address => bytes32) myVOTERID;
 
     modifier OnlyPresident() {
         require(
@@ -91,7 +94,7 @@ contract Voter {
     }
 
     function changeLEastBirthYear(uint256 _newYear) external OnlyAdmins {
-        if (_newYear < leastBirthYear) {
+        if (_newYear > leastBirthYear) {
             revert ErrorInputingBIrthYear();
         }
         leastBirthYear = _newYear;
@@ -163,25 +166,41 @@ contract Voter {
         emit NIDCreated(msg.sender, NID, _areaCode, _name);
     }
 
+    function registerAsVoter(uint256 _areaCode) external {
+        require(didIGetMyNID[msg.sender], "First get your NID");
+        require(
+            !getMyVoterInfo[msg.sender].amIVoter,
+            "You are Already a Voter"
+        );
+        bytes32 _NID = myNID[msg.sender];
+        bytes32 VOTERID = keccak256(
+            abi.encodePacked(
+                _NID,
+                msg.sender,
+                _areaCode,
+                blockhash(block.number),
+                block.coinbase,
+                block.prevrandao
+            )
+        );
+        getMyVoterInfo[msg.sender] = VoterINfo(
+            msg.sender,
+            _NID,
+            _areaCode,
+            true,
+            VOTERID
+        );
+        myVOTERID[msg.sender] = VOTERID;
+
+        emit VoterCreated(msg.sender, _NID, _areaCode, VOTERID);
+    }
+
     function isLeapYear(uint256 year) internal pure returns (bool) {
         if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
             return true;
         } else {
             return false;
         }
-    }
-
-    function registerAsVoter(uint256 _areaCode) external {
-        require(didIGetMyNID[msg.sender], "First get your NID");
-        require(getMyVoterInfo[msg.sender].amIVoter, "You are Already a Voter");
-        bytes32 _NID = myNID[msg.sender];
-        getMyVoterInfo[msg.sender] = VoterINfo(
-            msg.sender,
-            _NID,
-            _areaCode,
-            true
-        );
-        emit VoterCreated(msg.sender, _NID, _areaCode);
     }
 
     function checkValidMonth(
@@ -211,6 +230,14 @@ contract Voter {
         } else {
             date = 0;
         }
+    }
+
+    function getMyVOTERID() external view returns (bytes32) {
+        require(
+            getMyVoterInfo[msg.sender].amIVoter,
+            "You Need To Register as Voter"
+        );
+        return myVOTERID[msg.sender];
     }
 
     function viewMyVoterInfo() external view returns (VoterINfo memory) {

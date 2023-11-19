@@ -34,4 +34,24 @@ contract VotingTest is Test {
         bool testSuccess = voter.changeAdministrator(address(1), address(2));
         assertEq(testSuccess, false);
     }
+
+    function testNID() external {
+        vm.startPrank(address(8));
+        bytes32 nid = voter.getMyNID("A", "B", "C", false, 1220, 1999, 8, 9);
+        bytes32 testNid = voter.viewMyNID();
+        assertEq(nid, testNid);
+    }
+
+    function testNIDStruct() external {
+        vm.startPrank(address(8));
+        bytes32 nid = voter.getMyNID("A", "B", "C", false, 1220, 1999, 8, 9);
+        Voter.NIDinfo memory tempNid = voter.viewMyInfo(nid);
+        assertEq(tempNid._name, "A");
+        assertEq(tempNid.fatherName, "C");
+        assertEq(tempNid.motherName, "B");
+        assertEq(tempNid.isMarried, false);
+        assertEq(tempNid.myWalletAddress, address(8));
+        assertEq(tempNid.myNID, nid);
+        assertEq(tempNid.areaCode, 1220);
+    }
 }

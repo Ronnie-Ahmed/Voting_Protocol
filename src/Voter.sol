@@ -11,12 +11,6 @@ contract Voter {
     address councilPresident;
     uint256 leastBirthYear = 2005;
 
-    // struct VoterInfo {
-    //     string voterId;
-    //     string Name;
-    //     uint256 areaCode;
-
-    // }
     struct NIDinfo {
         string _name;
         string fatherName;
@@ -24,6 +18,7 @@ contract Voter {
         bool isMarried;
         address myWalletAddress;
         bytes32 myNID;
+        uint256 areaCode;
     }
 
     mapping(address => bool) isAdminUnique;
@@ -115,7 +110,7 @@ contract Voter {
                 _fathername,
                 isMarried,
                 block.timestamp,
-                blockhash(block.number - 1)
+                blockhash(block.number)
             )
         );
         myNID[msg.sender] = NID;
@@ -126,7 +121,8 @@ contract Voter {
             _mothername,
             isMarried,
             msg.sender,
-            NID
+            NID,
+            _areaCode
         );
     }
 
@@ -143,58 +139,40 @@ contract Voter {
         uint256 _year
     ) internal pure returns (uint256 date) {
         bool _isLeapYear = isLeapYear(_year);
-        assembly {
-            switch _month
-            case 1 {
-                date := 31
+
+        if (
+            _month == 1 ||
+            _month == 3 ||
+            _month == 5 ||
+            _month == 7 ||
+            _month == 8 ||
+            _month == 10 ||
+            _year == 12
+        ) {
+            date = 31;
+        } else if (_month == 4 || _month == 6 || _month == 9 || _month == 11) {
+            date = 30;
+        } else if (_month == 2) {
+            if (_isLeapYear) {
+                date = 29;
+            } else {
+                date = 28;
             }
-            case 3 {
-                date := 31
-            }
-            case 5 {
-                date := 31
-            }
-            case 7 {
-                date := 31
-            }
-            case 8 {
-                date := 31
-            }
-            case 10 {
-                date := 31
-            }
-            case 12 {
-                date := 31
-            }
-            case 4 {
-                date := 30
-            }
-            case 6 {
-                date := 30
-            }
-            case 9 {
-                date := 30
-            }
-            case 11 {
-                date := 30
-            }
-            case 2 {
-                switch _isLeapYear
-                case 1 {
-                    date := 29
-                }
-                default {
-                    date := 28
-                }
-            }
-            default {
-                date := 0 // Invalid month
-            }
+        } else {
+            date = 0;
         }
     }
 
     function viewMyNID() public view returns (bytes32) {
         return myNID[msg.sender];
+    }
+
+    function viewMyInfo(bytes32 _NID) public view returns (NIDinfo memory) {
+        return getMyNIDinfo[_NID];
+    }
+
+    function viewLeastBirthYear() external view returns (uint256) {
+        return leastBirthYear;
     }
 
     function viewAdmins()

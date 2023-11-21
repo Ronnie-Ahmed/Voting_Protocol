@@ -1,16 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
+/* 
+
+Author : Md Raisul Islam Ronnie
+Email : rksraisul@gmail.com
+Github :  https://github.com/Ronnie-Ahmed
+
+*/
+
 contract Voter {
+
+    ///////////////////
+    ///Error Codes/////
+    //////////////////
+
     error ErrorAdministratorAssign();
     error ErrorInputingBIrthYear();
     error InvalidInput();
+
+    ///////////////
+    ///Variables///
+    //////////////
 
     address administrator1;
     address administrator2;
     address immutable councilPresident;
     uint256 leastBirthYear = 2005;
     uint256 fee = 1 ether;
+
+    ///////////////
+    ///Structs/////
+    //////////////
 
     struct NIDinfo {
         string _name;
@@ -38,6 +59,11 @@ contract Voter {
         bytes32 _Nid;
         bool isACandidate;
     }
+
+    ///////////////
+    ///Events/////
+    //////////////
+
 
     event VoterCreated(
         address _myWalletAddress,
@@ -72,6 +98,11 @@ contract Voter {
         bytes32 _Nid
     );
 
+
+    ///////////////
+    ///Mappings///
+    //////////////
+
     mapping(address => bool) isAdminUnique;
     mapping(address => bytes32) myNID;
     mapping(address => bool) didIGetMyNID;
@@ -79,6 +110,10 @@ contract Voter {
     mapping(address => VoterINfo) getMyVoterInfo;
     mapping(address => bytes32) myVOTERID;
     mapping(address => Candidate) candidateInfo;
+
+    /////////////////
+    ///Modifiers/////
+    ////////////////
 
     modifier LeastAmount() {
         require(msg.value == fee, "Need to give Right Amount of Fee");
@@ -138,12 +173,18 @@ contract Voter {
         emit ADminsCreated(adminAddress[2], adminAddress[1], adminAddress[0]);
     }
 
+    ////////////////////
+    ///Admin Function///
+    ///////////////////
+
     function changeLEastBirthYear(uint256 _newYear) external OnlyAdmins {
         if (_newYear > leastBirthYear) {
             revert ErrorInputingBIrthYear();
         }
         leastBirthYear = _newYear;
     }
+
+    
 
     function changeAdministrator(
         address _administrator1,
@@ -167,6 +208,21 @@ contract Voter {
     function changeFee(uint256 _fee) external OnlyAdmins {
         fee = _fee * 1 ether;
     }
+
+    ////////////////////////
+    ///External Functions///
+    ///////////////////////
+
+    /* 
+    @param _name : Name of the Voter
+    @param _mothername : Mother's Name of the Voter
+    @param _fathername : Father's Name of the Voter
+    @param isMarried : Is the Voter Married
+    @param _areaCode : Area Code of the Voter
+    @param birthYear : Birth Year of the Voter
+    @param birthMonth : Birth Month of the Voter
+    @param birthday : Birth Day of the Voter
+    */
 
     function getMyNID(
         string memory _name,
@@ -215,6 +271,10 @@ contract Voter {
         emit NIDCreated(msg.sender, NID, _areaCode, _name);
     }
 
+    /* 
+    @param _areaCode : Area Code of the Voter
+    */
+
     function registerAsVoter(uint256 _areaCode) external OnlyNIDHolder {
         require(
             !getMyVoterInfo[msg.sender].amIVoter,
@@ -243,6 +303,11 @@ contract Voter {
         emit VoterCreated(msg.sender, _NID, _areaCode, VOTERID);
     }
 
+    /* 
+    @param _name : Name of the Candidate
+    @param _areaCode : Area Code of the Candidate
+    */
+
     function registerAsCandidate()
         external
         payable
@@ -267,6 +332,14 @@ contract Voter {
         emit NewCandidateAdded(_name, msg.sender, _areaCode, VoterId, Nid);
     }
 
+    /* 
+    @param year : Year to check if it is leap year or not
+
+    */
+
+    ////////////////////
+    ///Pure Function////
+    ///////////////////
     function isLeapYear(uint256 year) internal pure returns (bool) {
         if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
             return true;
@@ -304,10 +377,14 @@ contract Voter {
         }
     }
 
+    ///////////////////
+    ///View Function///
+    ///////////////////
     function getMyVOTERID() external view OnlyVoter returns (bytes32) {
         return myVOTERID[msg.sender];
     }
 
+    
     function viewMyVoterInfo() external view returns (VoterINfo memory) {
         return getMyVoterInfo[msg.sender];
     }

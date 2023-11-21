@@ -64,6 +64,14 @@ contract Voter {
         address indexed _administrator2
     );
 
+    event NewCandidateAdded(
+        string indexed _name,
+        address indexed _address,
+        uint256 indexed Code,
+        bytes32 _voterId,
+        bytes32 _Nid
+    );
+
     mapping(address => bool) isAdminUnique;
     mapping(address => bytes32) myNID;
     mapping(address => bool) didIGetMyNID;
@@ -256,6 +264,7 @@ contract Voter {
             Nid,
             true
         );
+        emit NewCandidateAdded(_name, msg.sender, _areaCode, VoterId, Nid);
     }
 
     function isLeapYear(uint256 year) internal pure returns (bool) {

@@ -11,7 +11,7 @@ contract VotingTest is Test {
 
     function setUp() external {
         voter = new Voter([address(1), address(2), address(3)]);
-        voting_system = new Voting_System(address(voter));
+        voting_system = new Voting_System([address(1), address(2), address(3)]);
     }
 
     function testAdmins() external {
@@ -112,5 +112,21 @@ contract VotingTest is Test {
     function testgetMyVOTERIDRevert() external {
         vm.expectRevert();
         voter.getMyVOTERID();
+    }
+
+    function testFee() external {
+        (address administrator, , ) = voter.viewAdmins();
+        vm.startPrank(administrator);
+        uint256 _fee = voting_system.viewFee();
+        assertEq(_fee, 1 ether);
+        voting_system.changeFee(2);
+        uint256 __fee = voting_system.viewFee();
+        assertEq(__fee, 2 ether);
+        // vm.stopPrank();
+    }
+
+    function testfeeRevert() external {
+        vm.expectRevert();
+        voting_system.changeFee(2);
     }
 }

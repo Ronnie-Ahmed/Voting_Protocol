@@ -2,14 +2,18 @@
 pragma solidity ^0.8.21;
 import {Voter} from "./Voter.sol";
 
-contract Voting_System {
-    address immutable administrator1;
-    address immutable administrator2;
-    address immutable councilPresident;
-    Voter immutable voter;
+contract Voting_System is Voter {
+    uint256 fee = 1 ether;
 
-    constructor(address _voter) {
-        voter = Voter(_voter);
-        (administrator1, administrator2, councilPresident) = voter.viewAdmins();
+    constructor(address[3] memory adminAddress) Voter(adminAddress) {}
+
+    function registerAsCandidate() external payable {}
+
+    function changeFee(uint256 _fee) external OnlyAdmins {
+        fee = _fee * 1 ether;
+    }
+
+    function viewFee() public view returns (uint256) {
+        return fee;
     }
 }

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.21;
 import {Test, console2} from "forge-std/Test.sol";
-import {Voting_System} from "../src/Voting_System.sol";
+// import {Voting_System} from "../src/Voting_System.sol";
 import {Voter} from "../src/Voter.sol";
 
 contract VotingTest is Test {
     Voter public voter;
 
-    Voting_System public voting_system;
+    // Voting_System public voting_system;
 
     function setUp() external {
         voter = new Voter([address(1), address(2), address(3)]);
-        voting_system = new Voting_System([address(1), address(2), address(3)]);
+        // voting_system = new Voting_System([address(1), address(2), address(3)]);
     }
 
     function testAdmins() external {
@@ -117,16 +117,25 @@ contract VotingTest is Test {
     function testFee() external {
         (address administrator, , ) = voter.viewAdmins();
         vm.startPrank(administrator);
-        uint256 _fee = voting_system.viewFee();
+        uint256 _fee = voter.viewFee();
         assertEq(_fee, 1 ether);
-        voting_system.changeFee(2);
-        uint256 __fee = voting_system.viewFee();
+        voter.changeFee(2);
+        uint256 __fee = voter.viewFee();
         assertEq(__fee, 2 ether);
         // vm.stopPrank();
     }
 
     function testfeeRevert() external {
         vm.expectRevert();
-        voting_system.changeFee(2);
+        voter.changeFee(2);
+    }
+
+    function testRegisterAsCandidate() external {
+        vm.startPrank(address(11));
+        deal(address(11), 10 ether);
+        registerVoter();
+        voter.registerAsCandidate{value: 1 ether}();
+        Voter.Candidate memory tempCandidate = voter.viewCandidateInfo();
+        assertEq(tempCandidate.isACandidate, true);
     }
 }

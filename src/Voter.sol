@@ -10,6 +10,7 @@ contract Voter {
     address administrator2;
     address immutable councilPresident;
     uint256 leastBirthYear = 2005;
+    uint256 fee = 1 ether;
 
     struct NIDinfo {
         string _name;
@@ -27,6 +28,15 @@ contract Voter {
         uint256 areaCode;
         bool amIVoter;
         bytes32 _voterID;
+    }
+
+    struct Candidate {
+        string _name;
+        address _address;
+        uint256 _areaCode;
+        bytes32 _voterId;
+        bytes32 _Nid;
+        bool isACandidate;
     }
 
     event VoterCreated(
@@ -60,6 +70,33 @@ contract Voter {
     mapping(bytes32 => NIDinfo) getMyNIDinfo;
     mapping(address => VoterINfo) getMyVoterInfo;
     mapping(address => bytes32) myVOTERID;
+    mapping(address => Candidate) candidateInfo;
+
+    modifier LeastAmount() {
+        require(msg.value == fee, "Need to give Right Amount of Fee");
+        _;
+    }
+
+    modifier OnlyCandidate() {
+        require(
+            candidateInfo[msg.sender].isACandidate,
+            "Only Voting Candidate Can Access this"
+        );
+        _;
+    }
+
+    modifier OnlyNIDHolder() {
+        require(didIGetMyNID[msg.sender], "Get Your NID");
+        _;
+    }
+
+    modifier OnlyVoter() {
+        require(
+            getMyVoterInfo[msg.sender].amIVoter,
+            "You have to be Voter First"
+        );
+        _;
+    }
 
     modifier OnlyPresident() {
         require(
@@ -119,6 +156,10 @@ contract Voter {
         isSuccess = true;
     }
 
+    function changeFee(uint256 _fee) external OnlyAdmins {
+        fee = _fee * 1 ether;
+    }
+
     function getMyNID(
         string memory _name,
         string memory _mothername,
@@ -166,8 +207,7 @@ contract Voter {
         emit NIDCreated(msg.sender, NID, _areaCode, _name);
     }
 
-    function registerAsVoter(uint256 _areaCode) external {
-        require(didIGetMyNID[msg.sender], "First get your NID");
+    function registerAsVoter(uint256 _areaCode) external OnlyNIDHolder {
         require(
             !getMyVoterInfo[msg.sender].amIVoter,
             "You are Already a Voter"
@@ -193,6 +233,29 @@ contract Voter {
         myVOTERID[msg.sender] = VOTERID;
 
         emit VoterCreated(msg.sender, _NID, _areaCode, VOTERID);
+    }
+
+    function registerAsCandidate()
+        external
+        payable
+        OnlyVoter
+        OnlyNIDHolder
+        LeastAmount
+    {
+        bytes32 Nid = myNID[msg.sender];
+        bytes32 VoterId = myVOTERID[msg.sender];
+        VoterINfo memory temp = getMyVoterInfo[msg.sender];
+        NIDinfo memory tempNid = getMyNIDinfo[Nid];
+        uint256 _areaCode = temp.areaCode;
+        string memory _name = tempNid._name;
+        candidateInfo[msg.sender] = Candidate(
+            _name,
+            msg.sender,
+            _areaCode,
+            VoterId,
+            Nid,
+            true
+        );
     }
 
     function isLeapYear(uint256 year) internal pure returns (bool) {
@@ -232,11 +295,7 @@ contract Voter {
         }
     }
 
-    function getMyVOTERID() external view returns (bytes32) {
-        require(
-            getMyVoterInfo[msg.sender].amIVoter,
-            "You Need To Register as Voter"
-        );
+    function getMyVOTERID() external view OnlyVoter returns (bytes32) {
         return myVOTERID[msg.sender];
     }
 
@@ -269,5 +328,18 @@ contract Voter {
         _administrator1 = administrator1;
         _administrator2 = administrator2;
         _councilPresident = councilPresident;
+    }
+
+    function viewFee() public view returns (uint256) {
+        return fee;
+    }
+
+    function viewCandidateInfo()
+        public
+        view
+        OnlyCandidate
+        returns (Candidate memory)
+    {
+        return candidateInfo[msg.sender];
     }
 }

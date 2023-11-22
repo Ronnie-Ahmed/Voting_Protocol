@@ -10,19 +10,25 @@ Github :  https://github.com/Ronnie-Ahmed
 */
 
 contract Voter {
-
     ///////////////////
     ///Error Codes/////
     //////////////////
 
-    error ErrorAdministratorAssign();
+    error ErrorAdministratorAssign(address _ErroAddress);
     error ErrorInputingBIrthYear();
     error InvalidInput();
+
+    enum ElectionState {
+        Pending,
+        InProgress,
+        Active,
+        Completed
+    }
 
     ///////////////
     ///Variables///
     //////////////
-
+    uint256 electionNum = 0;
     address administrator1;
     address administrator2;
     address immutable councilPresident;
@@ -60,10 +66,19 @@ contract Voter {
         bool isACandidate;
     }
 
+    struct Election {
+        uint256 _electionNum;
+        address[] candidateList;
+        uint256 candidateNum;
+        ElectionState currentState;
+        uint256 timetojoinAsCandidate;
+        uint256 votingStart;
+        uint256 votingEnd;
+    }
+
     ///////////////
     ///Events/////
     //////////////
-
 
     event VoterCreated(
         address _myWalletAddress,
@@ -98,11 +113,12 @@ contract Voter {
         bytes32 _Nid
     );
 
-
     ///////////////
-    ///Mappings///
-    //////////////
-
+    ///Mappings////
+    ///////////////
+    mapping(uint256 => address[]) candidateList;
+    mapping(uint256 => mapping(address => uint256)) numberOfVotesCandidategot;
+    mapping(uint256 => Election) electionInfo;
     mapping(address => bool) isAdminUnique;
     mapping(address => bytes32) myNID;
     mapping(address => bool) didIGetMyNID;
@@ -157,20 +173,28 @@ contract Voter {
         _;
     }
 
-    constructor(address[3] memory adminAddress) {
+    constructor(
+        address _administrator1,
+        address _administrator2,
+        address _councilPresident
+    ) {
+        address[3] memory temp = [
+            _administrator1,
+            _administrator2,
+            _councilPresident
+        ];
         for (uint256 i = 0; i < 3; i++) {
-            if (
-                isAdminUnique[adminAddress[i]] == true ||
-                adminAddress[i] == address(0)
-            ) {
-                revert ErrorAdministratorAssign();
+            if (isAdminUnique[temp[i]] == true || temp[i] == address(0)) {
+                revert ErrorAdministratorAssign({_ErroAddress: temp[i]});
             }
-            isAdminUnique[adminAddress[i]] = true;
+            isAdminUnique[temp[i]] = true;
         }
-        administrator1 = adminAddress[0];
-        administrator2 = adminAddress[1];
-        councilPresident = adminAddress[2];
-        emit ADminsCreated(adminAddress[2], adminAddress[1], adminAddress[0]);
+
+        administrator1 = _administrator1;
+        administrator2 = _administrator2;
+        councilPresident = _councilPresident;
+        electionInfo[0].currentState = ElectionState.Completed;
+        emit ADminsCreated(_administrator1, _administrator2, _councilPresident);
     }
 
     ////////////////////
@@ -184,8 +208,6 @@ contract Voter {
         leastBirthYear = _newYear;
     }
 
-    
-
     function changeAdministrator(
         address _administrator1,
         address _administrator2
@@ -196,7 +218,7 @@ contract Voter {
             _administrator2 == address(0) ||
             isAdminUnique[_administrator1] == true
         ) {
-            revert ErrorAdministratorAssign();
+            revert ErrorAdministratorAssign({_ErroAddress: msg.sender});
         }
 
         administrator1 = _administrator1;
@@ -209,9 +231,61 @@ contract Voter {
         fee = _fee * 1 ether;
     }
 
+    function preposeElection() external OnlyAdmins {
+        require(
+            electionInfo[electionNum].currentState == ElectionState.Completed,
+            "Election is not Completed"
+        );
+        electionNum += 1;
+        uint256 _id = electionNum;
+        electionInfo[_id]._electionNum = _id;
+        electionInfo[_id].candidateList.push(address(0));
+        electionInfo[_id].candidateNum = 0;
+        electionInfo[_id].currentState = ElectionState.Pending;
+        electionInfo[_id].votingStart = 0;
+        electionInfo[_id].votingEnd = 0;
+        electionInfo[_id].timetojoinAsCandidate = 0;
+    }
+
+    function approve(uint256 _id) external OnlyPresident {
+        require(
+            electionInfo[_id].currentState == ElectionState.Pending,
+            "Invalid Election ID"
+        );
+        electionInfo[_id].currentState = ElectionState.InProgress;
+        electionInfo[_id].timetojoinAsCandidate = block.timestamp;
+        electionInfo[_id].votingStart = block.timestamp + 1 days;
+        electionInfo[_id].votingEnd = block.timestamp + 3 days;
+    }
+
+    function startEletion(uint256 _id) external OnlyAdmins {
+        require(
+            electionInfo[_id].currentState == ElectionState.InProgress,
+            "Invalid Election ID"
+        );
+        require(
+            block.timestamp >= electionInfo[_id].votingStart,
+            "Still Have time to Join as Voting Candidate"
+        );
+        electionInfo[_id].currentState = ElectionState.Active;
+    }
+
     ////////////////////////
     ///External Functions///
     ///////////////////////
+
+    function joinAsCandidate(uint256 _id) external OnlyVoter {
+        require(
+            electionInfo[_id].currentState == ElectionState.InProgress,
+            "Election is not in Progress"
+        );
+        require(
+            block.timestamp < electionInfo[_id].votingStart,
+            "Time Finished To join as Candidate"
+        );
+        electionInfo[_id].candidateList.push(msg.sender);
+        electionInfo[_id].candidateNum += 1;
+    }
 
     /* 
     @param _name : Name of the Voter
@@ -384,7 +458,6 @@ contract Voter {
         return myVOTERID[msg.sender];
     }
 
-    
     function viewMyVoterInfo() external view returns (VoterINfo memory) {
         return getMyVoterInfo[msg.sender];
     }
@@ -427,5 +500,20 @@ contract Voter {
         returns (Candidate memory)
     {
         return candidateInfo[msg.sender];
+    }
+
+    function viewElectionInfo(
+        uint256 _ID
+    ) public view returns (Election memory) {
+        require(_ID <= electionNum && _ID > 0, "Invalid ID");
+        return electionInfo[_ID];
+    }
+
+    function viewElectionNumber() public view returns (uint256) {
+        return electionNum;
+    }
+
+    function viewCurrentProgress() public view returns (ElectionState) {
+        return electionInfo[electionNum].currentState;
     }
 }

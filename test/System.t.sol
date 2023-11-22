@@ -10,7 +10,7 @@ contract VotingTest is Test {
     // Voting_System public voting_system;
 
     function setUp() external {
-        voter = new Voter([address(1), address(2), address(3)]);
+        voter = new Voter(address(1), address(2), address(3));
         // voting_system = new Voting_System([address(1), address(2), address(3)]);
     }
 

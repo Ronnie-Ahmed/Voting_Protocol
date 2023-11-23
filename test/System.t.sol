@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.21;
 import {Test, console2} from "forge-std/Test.sol";
-// import {Voting_System} from "../src/Voting_System.sol";
 import {Voter} from "../src/Voter.sol";
 
 contract VotingTest is Test {
     Voter public voter;
-
-    // Voting_System public voting_system;
 
     function setUp() external {
         voter = new Voter(address(1), address(2), address(3));
@@ -137,5 +134,62 @@ contract VotingTest is Test {
         voter.registerAsCandidate{value: 1 ether}();
         Voter.Candidate memory tempCandidate = voter.viewCandidateInfo();
         assertEq(tempCandidate.isACandidate, true);
+    }
+
+    function testviewCurrentProgress() external {
+        string memory _state = voter.viewCurrentProgress();
+        assertEq(_state, "Completed");
+    }
+
+    function teststartElection() external {
+        (
+            address administrator1,
+            address administrator2,
+            address councilPresident
+        ) = voter.viewAdmins();
+        vm.prank(administrator1);
+        voter.preposeElection();
+        uint256 id = voter.viewElectionNumber();
+        vm.prank(councilPresident);
+        voter.approve(id);
+        uint256 start = block.timestamp;
+        vm.warp(start + 1 days);
+        vm.prank(administrator2);
+        string memory message = voter.startEletion(id);
+        assertEq(message, "Election Started");
+    }
+
+    function _startElection() public returns (address) {
+        (
+            address administrator1,
+            address administrator2,
+            address councilPresident
+        ) = voter.viewAdmins();
+        vm.prank(administrator1);
+        voter.preposeElection();
+        uint256 id = voter.viewElectionNumber();
+        vm.prank(councilPresident);
+        voter.approve(id);
+        return administrator2;
+    }
+
+    function candidate() public {
+        registerVoter();
+        voter.registerAsCandidate{value: 1 ether}();
+    }
+
+    function testCandidate() external {
+        uint256 start = block.timestamp;
+        address admin = _startElection();
+        vm.startPrank(address(10));
+        deal(address(10), 10 ether);
+        candidate();
+        uint256 id = voter.viewElectionNumber();
+        voter.joinAsCandidate(id);
+        vm.stopPrank();
+        vm.warp(start + 1 days);
+        vm.prank(admin);
+        string memory message = voter.startEletion(id);
+        assertEq(message, "Election Started");
     }
 }

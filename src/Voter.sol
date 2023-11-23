@@ -258,7 +258,9 @@ contract Voter {
         electionInfo[_id].votingEnd = block.timestamp + 3 days;
     }
 
-    function startEletion(uint256 _id) external OnlyAdmins {
+    function startEletion(
+        uint256 _id
+    ) external OnlyAdmins returns (string memory) {
         require(
             electionInfo[_id].currentState == ElectionState.InProgress,
             "Invalid Election ID"
@@ -268,13 +270,14 @@ contract Voter {
             "Still Have time to Join as Voting Candidate"
         );
         electionInfo[_id].currentState = ElectionState.Active;
+        return "Election Started";
     }
 
     ////////////////////////
     ///External Functions///
     ///////////////////////
 
-    function joinAsCandidate(uint256 _id) external OnlyVoter {
+    function joinAsCandidate(uint256 _id) external OnlyVoter OnlyCandidate {
         require(
             electionInfo[_id].currentState == ElectionState.InProgress,
             "Election is not in Progress"
@@ -513,7 +516,26 @@ contract Voter {
         return electionNum;
     }
 
-    function viewCurrentProgress() public view returns (ElectionState) {
-        return electionInfo[electionNum].currentState;
+    function viewCurrentProgress()
+        public
+        view
+        returns (string memory _currentState)
+    {
+        uint8 id = uint8(electionInfo[electionNum].currentState);
+        _currentState = enumToString(id);
+    }
+
+    function enumToString(
+        uint256 id
+    ) internal pure returns (string memory returnValue) {
+        if (id == 0) {
+            returnValue = "Pending";
+        } else if (id == 1) {
+            returnValue = "InProgress";
+        } else if (id == 2) {
+            returnValue = "Active";
+        } else if (id == 3) {
+            returnValue = "Completed";
+        }
     }
 }
